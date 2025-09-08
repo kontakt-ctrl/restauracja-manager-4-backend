@@ -1,0 +1,333 @@
+openapi: 3.0.1
+info:
+  title: Restaurant Manager API
+  version: 1.0.0
+servers:
+  - url: https://api.restaurant-manager.com
+paths:
+  /auth/login:
+    post:
+      summary: Logowanie menedżera
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Zwraca token JWT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+  /auth/me:
+    get:
+      summary: Pobierz dane zalogowanego użytkownika
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dane użytkownika
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: {type: integer}
+                  username: {type: string}
+                  roles: {type: array, items: {type: string}}
+  /orders:
+    get:
+      summary: Lista zamówień (z filtrami)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema: {type: string}
+        - in: query
+          name: date_from
+          schema: {type: string, format: date}
+        - in: query
+          name: date_to
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Lista zamówień
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+  /orders/{order_id}:
+    get:
+      summary: Szczegóły zamówienia
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: order_id
+          required: true
+          schema: {type: integer}
+      responses:
+        '200':
+          description: Szczegóły zamówienia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetails'
+  /menu/categories:
+    get:
+      summary: Lista kategorii menu
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista kategorii
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuCategory'
+    post:
+      summary: Dodaj kategorię menu
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuCategory'
+      responses:
+        '201':
+          description: Dodano kategorię
+  /menu/categories/{id}:
+    put:
+      summary: Edytuj kategorię menu
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuCategory'
+      responses:
+        '200':
+          description: Zaktualizowano kategorię
+    delete:
+      summary: Usuń kategorię menu
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: integer}
+      responses:
+        '204':
+          description: Usunięto kategorię
+  /menu/items:
+    get:
+      summary: Lista pozycji menu
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista pozycji menu
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+    post:
+      summary: Dodaj pozycję menu
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItem'
+      responses:
+        '201':
+          description: Dodano pozycję
+  /menu/items/{id}:
+    put:
+      summary: Edytuj pozycję menu
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItem'
+      responses:
+        '200':
+          description: Zaktualizowano pozycję
+    delete:
+      summary: Usuń pozycję menu
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: integer}
+      responses:
+        '204':
+          description: Usunięto pozycję
+  /menu/items/{id}/block:
+    post:
+      summary: Zablokuj/odblokuj pozycję menu
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_available:
+                  type: boolean
+      responses:
+        '200':
+          description: Zmieniono dostępność
+  /stats/orders/daily:
+    get:
+      summary: Statystyki dzienne zamówień
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: date
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Statystyki
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  terminal_stats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        terminal_name: {type: string}
+                        orders_count: {type: integer}
+  /stats/menu-items/top:
+    get:
+      summary: Top sprzedające się produkty
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: date_from
+          schema: {type: string, format: date}
+        - in: query
+          name: date_to
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Statystyki
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    menu_item_id: {type: integer}
+                    name: {type: string}
+                    sold_count: {type: integer}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Order:
+      type: object
+      properties:
+        id: {type: integer}
+        order_number: {type: integer}
+        status: {type: string}
+        type: {type: string}
+        created_at: {type: string, format: date-time}
+        ready_at: {type: string, format: date-time, nullable: true}
+        language: {type: string}
+    OrderDetails:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: {type: integer}
+                  menu_item_id: {type: integer}
+                  name: {type: string}
+                  quantity: {type: integer}
+            events:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: {type: integer}
+                  event_type: {type: string}
+                  terminal_name: {type: string}
+                  timestamp: {type: string, format: date-time}
+                  new_status: {type: string}
+    MenuCategory:
+      type: object
+      properties:
+        id: {type: integer}
+        name_pl: {type: string}
+        name_en: {type: string}
+        image_url: {type: string}
+    MenuItem:
+      type: object
+      properties:
+        id: {type: integer}
+        category_id: {type: integer}
+        name_pl: {type: string}
+        name_en: {type: string}
+        price_cents: {type: integer}
+        image_url: {type: string}
+        is_available: {type: boolean}
