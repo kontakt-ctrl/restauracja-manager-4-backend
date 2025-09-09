@@ -86,7 +86,8 @@ class MenuCategorySchema(BaseModel):
     name_pl: str
     name_en: str
     image_url: Optional[str]
-    class Config: orm_mode = True
+    class Config:
+        orm_mode = True
 
 class MenuItemSchema(BaseModel):
     id: Optional[int]
@@ -96,7 +97,8 @@ class MenuItemSchema(BaseModel):
     price_cents: int
     image_url: Optional[str]
     is_available: Optional[bool] = True
-    class Config: orm_mode = True
+    class Config:
+        orm_mode = True
 
 class OrderItemSchema(BaseModel):
     id: int
@@ -119,7 +121,8 @@ class OrderSchema(BaseModel):
     created_at: datetime
     ready_at: Optional[datetime]
     language: str
-    class Config: orm_mode = True
+    class Config:
+        orm_mode = True
 
 class OrderDetailsSchema(OrderSchema):
     items: List[OrderItemSchema]
@@ -129,16 +132,19 @@ class OrderDetailsSchema(OrderSchema):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=12)):
-    import jwt
+    import jwt  # PyJWT
     to_encode = data.copy()
     to_encode.update({"exp": datetime.utcnow() + expires_delta})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(lambda: SessionLocal())):
-    import jwt
+    import jwt  # PyJWT
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user = db.query(ManagerUser).filter(ManagerUser.id == payload.get("sub")).first()
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user = db.query(ManagerUser).filter(ManagerUser.id == int(user_id)).first()
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         return user
@@ -163,7 +169,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = db.query(ManagerUser).filter(ManagerUser.username == form_data.username).first()
     if not user or user.password_hash != form_data.password:  # produkcyjnie: sprawdź hash!
         raise HTTPException(status_code=400, detail="Invalid credentials")
-    token = create_access_token({"sub": user.id, "role": user.role})
+    token = create_access_token({"sub": str(user.id), "role": user.role})  # sub = string!
     return {"access_token": token}
 
 @app.get("/auth/me", response_model=UserMe)
