@@ -2,12 +2,12 @@ import os
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-import jwt
-from fastapi import FastAPI, Depends, HTTPException, status, Query, Path
+from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy import create_engine, Boolean, Column, Integer, String, DateTime, ForeignKey, func
+from sqlalchemy import create_engine, Boolean, Column, Integer, String, DateTime, ForeignKey, func, text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship, Session
+from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -129,11 +129,13 @@ class OrderDetailsSchema(OrderSchema):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=12)):
+    import jwt
     to_encode = data.copy()
     to_encode.update({"exp": datetime.utcnow() + expires_delta})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(lambda: SessionLocal())):
+    import jwt
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user = db.query(ManagerUser).filter(ManagerUser.id == payload.get("sub")).first()
@@ -146,10 +148,20 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 # FASTAPI APP
 app = FastAPI()
 
+# --- CORS middleware (MUSI być przed routerami!) ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # produkcyjnie: ["https://victorious-bush-0d4d65503.1.azurestaticapps.net"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# --- Endpoints ---
 @app.post("/auth/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(lambda: SessionLocal())):
     user = db.query(ManagerUser).filter(ManagerUser.username == form_data.username).first()
-    if not user or user.password_hash != form_data.password:  # dla przykładu, produkcyjnie: hash!
+    if not user or user.password_hash != form_data.password:  # produkcyjnie: sprawdź hash!
         raise HTTPException(status_code=400, detail="Invalid credentials")
     token = create_access_token({"sub": user.id, "role": user.role})
     return {"access_token": token}
@@ -291,6 +303,19 @@ def top_menu_items(
         {"menu_item_id": id, "name": name, "sold_count": sold}
         for id, name, sold in q.all()
     ]
+
+@app.get("/test-db")
+def test_db_connection():
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return {"db": "ok"}
+    except Exception as e:
+        return {"db": "error", "details": str(e)}
+
+@app.get("/hello-debug")
+def hello_debug():
+    return {"msg": "hello from new code"}
 
 @app.on_event("startup")
 def startup():
