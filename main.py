@@ -345,11 +345,6 @@ def hello_debug():
 def startup():
     Base.metadata.create_all(bind=engine)
 
-@app.get("/debug-secret")
-def debug_secret():
-    import os
-    return {"JWT_SECRET": os.getenv("JWT_SECRET")}
-
 # --- ENDPOINTY UŻYTKOWNIKÓW ---
 
 @app.get("/users", response_model=List[ManagerUserOut])
