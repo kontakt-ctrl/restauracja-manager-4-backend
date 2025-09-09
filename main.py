@@ -320,3 +320,8 @@ def hello_debug():
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(bind=engine)
+
+@app.get("/debug-secret")
+def debug_secret():
+    import os
+    return {"JWT_SECRET": os.getenv("JWT_SECRET")}
