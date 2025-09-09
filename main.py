@@ -157,7 +157,7 @@ app = FastAPI()
 # --- CORS middleware (MUSI być przed routerami!) ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://happy-coast-068f78503.2.azurestaticapps.net/"],  # produkcyjnie: ["https://victorious-bush-0d4d65503.1.azurestaticapps.net"]
+    allow_origins=["https://happy-coast-068f78503.2.azurestaticapps.net"],  # produkcyjnie: ["https://victorious-bush-0d4d65503.1.azurestaticapps.net"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
