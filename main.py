@@ -128,6 +128,24 @@ class OrderDetailsSchema(OrderSchema):
     items: List[OrderItemSchema]
     events: List[OrderEventSchema]
 
+# --- SCHEMATY UŻYTKOWNIKÓW ---
+class ManagerUserCreate(BaseModel):
+    username: str
+    password: str
+    role: Optional[str] = "manager"
+
+class ManagerUserUpdate(BaseModel):
+    username: Optional[str]
+    password: Optional[str]
+    role: Optional[str]
+
+class ManagerUserOut(BaseModel):
+    id: int
+    username: str
+    role: str
+    class Config:
+        orm_mode = True
+
 # JWT
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -331,3 +349,47 @@ def startup():
 def debug_secret():
     import os
     return {"JWT_SECRET": os.getenv("JWT_SECRET")}
+
+# --- ENDPOINTY UŻYTKOWNIKÓW ---
+
+@app.get("/users", response_model=List[ManagerUserOut])
+def list_users(db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+    return db.query(ManagerUser).all()
+
+@app.post("/users", response_model=ManagerUserOut)
+def create_user(user: ManagerUserCreate, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+    if db.query(ManagerUser).filter(ManagerUser.username == user.username).first():
+        raise HTTPException(status_code=400, detail="User already exists")
+    user_obj = ManagerUser(
+        username=user.username,
+        password_hash=user.password,  # produkcyjnie: hashować!
+        role=user.role or "manager"
+    )
+    db.add(user_obj)
+    db.commit()
+    db.refresh(user_obj)
+    return user_obj
+
+@app.put("/users/{user_id}", response_model=ManagerUserOut)
+def update_user(user_id: int, upd: ManagerUserUpdate, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+    user = db.query(ManagerUser).filter(ManagerUser.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if upd.username is not None:
+        user.username = upd.username
+    if upd.password is not None:
+        user.password_hash = upd.password  # produkcyjnie: hashować!
+    if upd.role is not None:
+        user.role = upd.role
+    db.commit()
+    db.refresh(user)
+    return user
+
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+    user = db.query(ManagerUser).filter(ManagerUser.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"detail": "User deleted"}
