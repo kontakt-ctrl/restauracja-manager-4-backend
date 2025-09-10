@@ -1,8 +1,10 @@
 import os
+import logging
+import time
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import create_engine, Boolean, Column, Integer, String, DateTime, ForeignKey, func, text
@@ -10,6 +12,40 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 from dotenv import load_dotenv
+
+# --- KONFIGURACJA LOGOWANIA ---
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("restauracja-manager-4-backend")
+
+app = FastAPI()
+
+# --- MIDDLEWARE LOGUJĄCY ---
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    idem = f"{request.method} {request.url.path}"
+    client_ip = request.client.host if request.client else "unknown"
+    try:
+        body = await request.body()
+        body_str = body.decode("utf-8") if body else ""
+        logger.info(f"Request: {idem} from {client_ip} body={body_str}")
+    except Exception as e:
+        logger.info(f"Request: {idem} from {client_ip} (body not logged: {e})")
+    start_time = time.time()
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        logger.exception(f"Exception in {idem} from {client_ip}")
+        raise
+    process_time = (time.time() - start_time) * 1000
+    logger.info(f"Response: {idem} status={response.status_code} in {process_time:.1f}ms")
+    return response
 
 load_dotenv()
 
@@ -168,9 +204,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         return user
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
-
-# FASTAPI APP
-app = FastAPI()
 
 # --- CORS middleware (MUSI być przed routerami!) ---
 app.add_middleware(
