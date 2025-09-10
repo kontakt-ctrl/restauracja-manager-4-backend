@@ -144,6 +144,15 @@ class MenuItemSchema(BaseModel):
     class Config:
         orm_mode = True
 
+# --- DODAJEMY NOWY SCHEMAT DO TWORZENIA MENU ITEM ---
+class MenuItemCreate(BaseModel):
+    category_id: int
+    name_pl: str
+    name_en: str
+    price_cents: int
+    image_url: Optional[str]
+    is_available: Optional[bool] = True
+
 class OrderItemSchema(BaseModel):
     id: int
     menu_item_id: int
@@ -275,8 +284,9 @@ def get_menu_item(id: int, db: Session = Depends(get_db), _: ManagerUser = Depen
         raise HTTPException(status_code=404, detail="Menu item not found")
     return obj
 
+# --- ZMIENIONY ENDPOINT POST /menu/items ---
 @app.post("/menu/items", response_model=MenuItemSchema)
-def add_menu_item(item: MenuItemSchema, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
+def add_menu_item(item: MenuItemCreate, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = MenuItem(**item.dict(exclude_unset=True))
     db.add(obj)
     db.commit()
