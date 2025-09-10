@@ -109,7 +109,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MenuCategory'
+              $ref: '#/components/schemas/MenuCategoryCreate'
       responses:
         '201':
           description: Dodano kategorię
@@ -321,6 +321,13 @@ components:
         name_pl: {type: string}
         name_en: {type: string}
         image_url: {type: string}
+    MenuCategoryCreate:
+      type: object
+      properties:
+        name_pl: {type: string}
+        name_en: {type: string}
+        image_url: {type: string}
+      required: [name_pl, name_en]
     MenuItem:
       type: object
       properties:
