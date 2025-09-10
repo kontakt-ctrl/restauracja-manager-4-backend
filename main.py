@@ -133,6 +133,12 @@ class MenuCategorySchema(BaseModel):
     class Config:
         orm_mode = True
 
+# Model do tworzenia kategorii (bez id)
+class MenuCategoryCreate(BaseModel):
+    name_pl: str
+    name_en: str
+    image_url: Optional[str]
+
 class MenuItemSchema(BaseModel):
     id: Optional[int]
     category_id: int
@@ -144,7 +150,6 @@ class MenuItemSchema(BaseModel):
     class Config:
         orm_mode = True
 
-# --- DODAJEMY NOWY SCHEMAT DO TWORZENIA MENU ITEM ---
 class MenuItemCreate(BaseModel):
     category_id: int
     name_pl: str
@@ -249,7 +254,7 @@ def get_categories(db: Session = Depends(get_db), _: ManagerUser = Depends(get_c
     return db.query(MenuCategory).all()
 
 @app.post("/menu/categories", response_model=MenuCategorySchema)
-def add_category(cat: MenuCategorySchema, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
+def add_category(cat: MenuCategoryCreate, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = MenuCategory(**cat.dict(exclude_unset=True))
     db.add(obj)
     db.commit()
@@ -284,7 +289,6 @@ def get_menu_item(id: int, db: Session = Depends(get_db), _: ManagerUser = Depen
         raise HTTPException(status_code=404, detail="Menu item not found")
     return obj
 
-# --- ZMIENIONY ENDPOINT POST /menu/items ---
 @app.post("/menu/items", response_model=MenuItemSchema)
 def add_menu_item(item: MenuItemCreate, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = MenuItem(**item.dict(exclude_unset=True))
