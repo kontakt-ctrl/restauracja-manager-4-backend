@@ -131,7 +131,7 @@ class MenuCategorySchema(BaseModel):
     name_en: str
     image_url: Optional[str]
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Model do tworzenia kategorii (bez id)
 class MenuCategoryCreate(BaseModel):
@@ -148,7 +148,7 @@ class MenuItemSchema(BaseModel):
     image_url: Optional[str]
     is_available: Optional[bool] = True
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MenuItemCreate(BaseModel):
     category_id: int
@@ -180,7 +180,7 @@ class OrderSchema(BaseModel):
     ready_at: Optional[datetime]
     language: str
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class OrderDetailsSchema(OrderSchema):
     items: List[OrderItemSchema]
@@ -202,7 +202,11 @@ class ManagerUserOut(BaseModel):
     username: str
     role: str
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class HourlyOrderStats(BaseModel):
+    hour: str
+    orders_count: int
 
 # JWT
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -389,6 +393,28 @@ def top_menu_items(
         {"menu_item_id": id, "name": name, "sold_count": sold}
         for id, name, sold in q.all()
     ]
+
+@app.get("/stats/orders/hours", response_model=List[HourlyOrderStats])
+def orders_by_hours(
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _: ManagerUser = Depends(get_current_user)
+):
+    q = db.query(
+        func.to_char(Order.created_at, 'HH24:00').label("hour"),
+        func.count().label("orders_count")
+    )
+    
+    if date_from:
+        q = q.filter(func.date(Order.created_at) >= date_from)
+    if date_to:
+        q = q.filter(func.date(Order.created_at) <= date_to)
+    
+    q = q.group_by(func.to_char(Order.created_at, 'HH24:00')).order_by(func.to_char(Order.created_at, 'HH24:00'))
+    
+    results = q.all()
+    return [{"hour": hour, "orders_count": count} for hour, count in results]
 
 @app.get("/test-db")
 def test_db_connection():
