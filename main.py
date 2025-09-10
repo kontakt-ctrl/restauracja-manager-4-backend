@@ -57,6 +57,14 @@ engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+# --- POPRAWNE ZARZĄDZANIE SESJĄ DB ---
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 # MODELE SQLALCHEMY
 class ManagerUser(Base):
     __tablename__ = "manager_user"
@@ -191,7 +199,7 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=1
     to_encode.update({"exp": datetime.utcnow() + expires_delta})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(lambda: SessionLocal())):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     import jwt  # PyJWT
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
@@ -216,7 +224,7 @@ app.add_middleware(
 
 # --- Endpoints ---
 @app.post("/auth/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(lambda: SessionLocal())):
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(ManagerUser).filter(ManagerUser.username == form_data.username).first()
     if not user or user.password_hash != form_data.password:  # produkcyjnie: sprawdź hash!
         raise HTTPException(status_code=400, detail="Invalid credentials")
@@ -228,11 +236,11 @@ def get_me(current_user: ManagerUser = Depends(get_current_user)):
     return {"id": current_user.id, "username": current_user.username, "roles": [current_user.role]}
 
 @app.get("/menu/categories", response_model=List[MenuCategorySchema])
-def get_categories(db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def get_categories(db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     return db.query(MenuCategory).all()
 
 @app.post("/menu/categories", response_model=MenuCategorySchema)
-def add_category(cat: MenuCategorySchema, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def add_category(cat: MenuCategorySchema, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = MenuCategory(**cat.dict(exclude_unset=True))
     db.add(obj)
     db.commit()
@@ -240,7 +248,7 @@ def add_category(cat: MenuCategorySchema, db: Session = Depends(lambda: SessionL
     return obj
 
 @app.put("/menu/categories/{id}", response_model=MenuCategorySchema)
-def update_category(id: int, upd: MenuCategorySchema, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def update_category(id: int, upd: MenuCategorySchema, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = db.query(MenuCategory).filter(MenuCategory.id == id).first()
     if not obj: raise HTTPException(404)
     for k, v in upd.dict(exclude_unset=True).items(): setattr(obj, k, v)
@@ -249,7 +257,7 @@ def update_category(id: int, upd: MenuCategorySchema, db: Session = Depends(lamb
     return obj
 
 @app.delete("/menu/categories/{id}")
-def delete_category(id: int, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def delete_category(id: int, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = db.query(MenuCategory).filter(MenuCategory.id == id).first()
     if not obj: raise HTTPException(404)
     db.delete(obj)
@@ -257,11 +265,11 @@ def delete_category(id: int, db: Session = Depends(lambda: SessionLocal()), _: M
     return {}
 
 @app.get("/menu/items", response_model=List[MenuItemSchema])
-def get_menu_items(db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def get_menu_items(db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     return db.query(MenuItem).all()
 
 @app.post("/menu/items", response_model=MenuItemSchema)
-def add_menu_item(item: MenuItemSchema, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def add_menu_item(item: MenuItemSchema, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = MenuItem(**item.dict(exclude_unset=True))
     db.add(obj)
     db.commit()
@@ -269,7 +277,7 @@ def add_menu_item(item: MenuItemSchema, db: Session = Depends(lambda: SessionLoc
     return obj
 
 @app.put("/menu/items/{id}", response_model=MenuItemSchema)
-def update_menu_item(id: int, upd: MenuItemSchema, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def update_menu_item(id: int, upd: MenuItemSchema, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = db.query(MenuItem).filter(MenuItem.id == id).first()
     if not obj: raise HTTPException(404)
     for k, v in upd.dict(exclude_unset=True).items(): setattr(obj, k, v)
@@ -278,7 +286,7 @@ def update_menu_item(id: int, upd: MenuItemSchema, db: Session = Depends(lambda:
     return obj
 
 @app.delete("/menu/items/{id}")
-def delete_menu_item(id: int, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def delete_menu_item(id: int, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = db.query(MenuItem).filter(MenuItem.id == id).first()
     if not obj: raise HTTPException(404)
     db.delete(obj)
@@ -286,7 +294,7 @@ def delete_menu_item(id: int, db: Session = Depends(lambda: SessionLocal()), _: 
     return {}
 
 @app.post("/menu/items/{id}/block")
-def block_menu_item(id: int, is_available: bool, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def block_menu_item(id: int, is_available: bool, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = db.query(MenuItem).filter(MenuItem.id == id).first()
     if not obj: raise HTTPException(404)
     obj.is_available = is_available
@@ -299,7 +307,7 @@ def get_orders(
     status: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
-    db: Session = Depends(lambda: SessionLocal()),
+    db: Session = Depends(get_db),
     _: ManagerUser = Depends(get_current_user)
 ):
     q = db.query(Order)
@@ -309,7 +317,7 @@ def get_orders(
     return q.all()
 
 @app.get("/orders/{order_id}", response_model=OrderDetailsSchema)
-def get_order_details(order_id: int, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def get_order_details(order_id: int, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order: raise HTTPException(404)
     items = (
@@ -330,7 +338,7 @@ def get_order_details(order_id: int, db: Session = Depends(lambda: SessionLocal(
     )
 
 @app.get("/stats/orders/daily")
-def orders_daily(date: Optional[str] = Query(None), db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def orders_daily(date: Optional[str] = Query(None), db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     day = date or datetime.utcnow().date()
     results = (
         db.query(OrderEventLog.terminal_name, func.count().label("orders_count"))
@@ -345,7 +353,7 @@ def orders_daily(date: Optional[str] = Query(None), db: Session = Depends(lambda
 def top_menu_items(
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
-    db: Session = Depends(lambda: SessionLocal()),
+    db: Session = Depends(get_db),
     _: ManagerUser = Depends(get_current_user)
 ):
     q = db.query(MenuItem.id, MenuItem.name_pl, func.sum(OrderItem.quantity).label("sold_count")) \
@@ -381,11 +389,11 @@ def startup():
 # --- ENDPOINTY UŻYTKOWNIKÓW ---
 
 @app.get("/users", response_model=List[ManagerUserOut])
-def list_users(db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def list_users(db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     return db.query(ManagerUser).all()
 
 @app.post("/users", response_model=ManagerUserOut)
-def create_user(user: ManagerUserCreate, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def create_user(user: ManagerUserCreate, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     if db.query(ManagerUser).filter(ManagerUser.username == user.username).first():
         raise HTTPException(status_code=400, detail="User already exists")
     user_obj = ManagerUser(
@@ -399,7 +407,7 @@ def create_user(user: ManagerUserCreate, db: Session = Depends(lambda: SessionLo
     return user_obj
 
 @app.put("/users/{user_id}", response_model=ManagerUserOut)
-def update_user(user_id: int, upd: ManagerUserUpdate, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def update_user(user_id: int, upd: ManagerUserUpdate, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     user = db.query(ManagerUser).filter(ManagerUser.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -414,7 +422,7 @@ def update_user(user_id: int, upd: ManagerUserUpdate, db: Session = Depends(lamb
     return user
 
 @app.delete("/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(lambda: SessionLocal()), _: ManagerUser = Depends(get_current_user)):
+def delete_user(user_id: int, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     user = db.query(ManagerUser).filter(ManagerUser.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
