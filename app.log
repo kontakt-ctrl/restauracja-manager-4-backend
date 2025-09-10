@@ -1,0 +1,18 @@
+2025-09-10 10:22:28,741 [INFO] restauracja-manager-4-backend: Request: POST /auth/login from testclient body=username=testuser&password=testpass
+2025-09-10 10:22:29,606 [INFO] restauracja-manager-4-backend: Response: POST /auth/login status=200 in 864.8ms
+2025-09-10 10:22:29,608 [INFO] httpx: HTTP Request: POST http://testserver/auth/login "HTTP/1.1 200 OK"
+2025-09-10 10:22:29,609 [INFO] restauracja-manager-4-backend: Request: GET /menu/items/1 from testclient body=
+2025-09-10 10:22:29,613 [INFO] restauracja-manager-4-backend: Response: GET /menu/items/1 status=200 in 4.1ms
+2025-09-10 10:22:29,614 [INFO] httpx: HTTP Request: GET http://testserver/menu/items/1 "HTTP/1.1 200 OK"
+2025-09-10 10:22:29,615 [INFO] restauracja-manager-4-backend: Request: GET /menu/items/9999 from testclient body=
+2025-09-10 10:22:29,618 [INFO] restauracja-manager-4-backend: Response: GET /menu/items/9999 status=404 in 2.9ms
+2025-09-10 10:22:29,619 [INFO] httpx: HTTP Request: GET http://testserver/menu/items/9999 "HTTP/1.1 404 Not Found"
+2025-09-10 10:22:29,620 [INFO] restauracja-manager-4-backend: Request: GET /menu/items/1 from testclient body=
+2025-09-10 10:22:29,621 [INFO] restauracja-manager-4-backend: Response: GET /menu/items/1 status=401 in 1.1ms
+2025-09-10 10:22:29,622 [INFO] httpx: HTTP Request: GET http://testserver/menu/items/1 "HTTP/1.1 401 Unauthorized"
+2025-09-10 10:22:57,173 [INFO] restauracja-manager-4-backend: Request: POST /auth/login from testclient body=username=testuser&password=testpass
+2025-09-10 10:22:57,195 [INFO] restauracja-manager-4-backend: Response: POST /auth/login status=200 in 22.3ms
+2025-09-10 10:22:57,197 [INFO] httpx: HTTP Request: POST http://testserver/auth/login "HTTP/1.1 200 OK"
+2025-09-10 10:22:57,198 [INFO] restauracja-manager-4-backend: Request: GET /menu/items/1 from testclient body=
+2025-09-10 10:22:57,202 [INFO] restauracja-manager-4-backend: Response: GET /menu/items/1 status=200 in 4.1ms
+2025-09-10 10:22:57,203 [INFO] httpx: HTTP Request: GET http://testserver/menu/items/1 "HTTP/1.1 200 OK"

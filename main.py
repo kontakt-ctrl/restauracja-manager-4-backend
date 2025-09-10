@@ -268,6 +268,13 @@ def delete_category(id: int, db: Session = Depends(get_db), _: ManagerUser = Dep
 def get_menu_items(db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     return db.query(MenuItem).all()
 
+@app.get("/menu/items/{id}", response_model=MenuItemSchema)
+def get_menu_item(id: int, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
+    obj = db.query(MenuItem).filter(MenuItem.id == id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    return obj
+
 @app.post("/menu/items", response_model=MenuItemSchema)
 def add_menu_item(item: MenuItemSchema, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
     obj = MenuItem(**item.dict(exclude_unset=True))

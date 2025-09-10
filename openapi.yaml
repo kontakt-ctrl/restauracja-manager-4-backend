@@ -172,6 +172,24 @@ paths:
         '201':
           description: Dodano pozycję
   /menu/items/{id}:
+    get:
+      summary: Pobierz szczegóły pozycji menu
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: integer}
+      responses:
+        '200':
+          description: Szczegóły pozycji menu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '404':
+          description: Pozycja menu nie została znaleziona
     put:
       summary: Edytuj pozycję menu
       security:
