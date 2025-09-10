@@ -273,6 +273,33 @@ paths:
                     menu_item_id: {type: integer}
                     name: {type: string}
                     sold_count: {type: integer}
+  /stats/orders/hours:
+    get:
+      summary: Statystyki godzinowe zamówień (tylko status pending)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: date_from
+          schema: {type: string, format: date}
+        - in: query
+          name: date_to
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Statystyki godzinowe zamówień
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    hour:
+                      type: string
+                      format: date-time
+                    orders_count:
+                      type: integer
 components:
   securitySchemes:
     bearerAuth:
