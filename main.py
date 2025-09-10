@@ -390,6 +390,29 @@ def top_menu_items(
         for id, name, sold in q.all()
     ]
 
+@app.get("/stats/orders/hours")
+def orders_by_hour(
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _: ManagerUser = Depends(get_current_user)
+):
+    # Statystyki godzinowe tylko dla statusu "pending"
+    q = db.query(
+        func.date_trunc('hour', Order.created_at).label('hour'),
+        func.count().label('orders_count')
+    ).filter(Order.status == "pending")
+    if date_from:
+        q = q.filter(Order.created_at >= date_from)
+    if date_to:
+        q = q.filter(Order.created_at <= date_to)
+    q = q.group_by('hour').order_by('hour')
+    results = q.all()
+    return [
+        {"hour": hour.isoformat() if hour else None, "orders_count": count}
+        for hour, count in results
+    ]
+
 @app.get("/test-db")
 def test_db_connection():
     try:
