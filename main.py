@@ -89,6 +89,7 @@ class MenuItem(Base):
     price_cents = Column(Integer)
     image_url = Column(String, nullable=True)
     is_available = Column(Boolean, default=True)
+    ingredients = Column(String, nullable=True)  # nowa kolumna
 
 class Order(Base):
     __tablename__ = "orders"
@@ -115,6 +116,17 @@ class OrderEventLog(Base):
     terminal_name = Column(String)
     timestamp = Column(DateTime)
     new_status = Column(String)
+
+class Payment(Base):
+    __tablename__ = "payments"
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    hostname = Column(String)
+    order_number = Column(Integer)
+    amount_cents = Column(Integer)
+    status = Column(String)
+    terminal_log = Column(String, nullable=True)
+    description = Column(String, nullable=True)
 
 # SCHEMATY Pydantic
 class Token(BaseModel):
@@ -147,6 +159,7 @@ class MenuItemSchema(BaseModel):
     price_cents: int
     image_url: Optional[str]
     is_available: Optional[bool] = True
+    ingredients: Optional[str] = None  # nowa kolumna
     class Config:
         orm_mode = True
 
@@ -157,6 +170,7 @@ class MenuItemCreate(BaseModel):
     price_cents: int
     image_url: Optional[str]
     is_available: Optional[bool] = True
+    ingredients: Optional[str] = None  # nowa kolumna
 
 class OrderItemSchema(BaseModel):
     id: int
@@ -203,6 +217,26 @@ class ManagerUserOut(BaseModel):
     role: str
     class Config:
         orm_mode = True
+
+class PaymentSchema(BaseModel):
+    id: int
+    created_at: datetime
+    hostname: str
+    order_number: int
+    amount_cents: int
+    status: str
+    terminal_log: Optional[str]
+    description: Optional[str]
+    class Config:
+        orm_mode = True
+
+class PaymentCreate(BaseModel):
+    hostname: str
+    order_number: int
+    amount_cents: int
+    status: str
+    terminal_log: Optional[str] = None
+    description: Optional[str] = None
 
 # JWT
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -412,6 +446,25 @@ def orders_by_hour(
         {"hour": hour.isoformat() if hour else None, "orders_count": count}
         for hour, count in results
     ]
+
+@app.get("/payments", response_model=List[PaymentSchema])
+def list_payments(db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
+    return db.query(Payment).all()
+
+@app.post("/payments", response_model=PaymentSchema)
+def create_payment(data: PaymentCreate, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
+    obj = Payment(**data.dict(exclude_unset=True))
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+@app.get("/payments/{payment_id}", response_model=PaymentSchema)
+def get_payment(payment_id: int, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
+    obj = db.query(Payment).filter(Payment.id == payment_id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return obj
 
 @app.get("/test-db")
 def test_db_connection():
