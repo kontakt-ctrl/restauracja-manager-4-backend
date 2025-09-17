@@ -314,6 +314,7 @@ def delete_category(id: int, db: Session = Depends(get_db), _: ManagerUser = Dep
 
 @app.get("/menu/items", response_model=List[MenuItemSchema])
 def get_menu_items(db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
+    # ingredients pole jest obecne w schema, więc GET/POST/PUT obsługują je domyślnie!
     return db.query(MenuItem).all()
 
 @app.get("/menu/items/{id}", response_model=MenuItemSchema)
@@ -448,8 +449,38 @@ def orders_by_hour(
     ]
 
 @app.get("/payments", response_model=List[PaymentSchema])
-def list_payments(db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
-    return db.query(Payment).all()
+def list_payments(
+    order_number: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    hostname: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _: ManagerUser = Depends(get_current_user)
+):
+    """
+    Filtrowanie płatności wg parametrów: order_number, status, date_from, date_to, hostname
+    """
+    query = db.query(Payment)
+    if order_number is not None:
+        query = query.filter(Payment.order_number == order_number)
+    if status is not None:
+        query = query.filter(Payment.status == status)
+    if date_from is not None:
+        try:
+            date_from_dt = datetime.fromisoformat(date_from)
+            query = query.filter(Payment.created_at >= date_from_dt)
+        except Exception:
+            pass
+    if date_to is not None:
+        try:
+            date_to_dt = datetime.fromisoformat(date_to)
+            query = query.filter(Payment.created_at <= date_to_dt)
+        except Exception:
+            pass
+    if hostname is not None:
+        query = query.filter(Payment.hostname == hostname)
+    return query.all()
 
 @app.post("/payments", response_model=PaymentSchema)
 def create_payment(data: PaymentCreate, db: Session = Depends(get_db), _: ManagerUser = Depends(get_current_user)):
