@@ -167,7 +167,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MenuItem'
+              $ref: '#/components/schemas/MenuItemCreate'
       responses:
         '201':
           description: Dodano pozycję
@@ -300,6 +300,50 @@ paths:
                       format: date-time
                     orders_count:
                       type: integer
+  /payments:
+    get:
+      summary: Lista płatności
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista płatności
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+    post:
+      summary: Dodaj płatność
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreate'
+      responses:
+        '201':
+          description: Dodano płatność
+  /payments/{payment_id}:
+    get:
+      summary: Pobierz płatność
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: payment_id
+          required: true
+          schema: {type: integer}
+      responses:
+        '200':
+          description: Szczegóły płatności
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
 components:
   securitySchemes:
     bearerAuth:
@@ -365,3 +409,36 @@ components:
         price_cents: {type: integer}
         image_url: {type: string}
         is_available: {type: boolean}
+        ingredients: {type: string}
+    MenuItemCreate:
+      type: object
+      properties:
+        category_id: {type: integer}
+        name_pl: {type: string}
+        name_en: {type: string}
+        price_cents: {type: integer}
+        image_url: {type: string}
+        is_available: {type: boolean}
+        ingredients: {type: string}
+      required: [category_id, name_pl, name_en, price_cents]
+    Payment:
+      type: object
+      properties:
+        id: {type: integer}
+        created_at: {type: string, format: date-time}
+        hostname: {type: string}
+        order_number: {type: integer}
+        amount_cents: {type: integer}
+        status: {type: string}
+        terminal_log: {type: string}
+        description: {type: string}
+    PaymentCreate:
+      type: object
+      properties:
+        hostname: {type: string}
+        order_number: {type: integer}
+        amount_cents: {type: integer}
+        status: {type: string}
+        terminal_log: {type: string}
+        description: {type: string}
+      required: [hostname, order_number, amount_cents, status]
